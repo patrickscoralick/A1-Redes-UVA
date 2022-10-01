@@ -99,6 +99,8 @@ int main()
             if(byteCountNome > 0 && byteCountMensagem > 0)
             {
                 cout << "\nClient: Mensagem enviada: " << byteCountNome+byteCountMensagem << " bytes.\n" << endl;
+                cout << "Nome: " << caminho_arquivo << endl;
+                cout << "Texto: " << m.mensagem << "\n" << endl;
             }
             
             else
@@ -128,7 +130,7 @@ int main()
         {
             // Tentei fazer uma criação autmática de arquivo, caso ele não existisse. Mas não deu mt certo.
             cout << "Arquivo '" << caminho_arquivo << "' nao encontrado. Criando novo arquivo..." << endl;
-            
+
             // ofstream arquivo(caminho_arquivo);
             // cout << "Digite o texto do arquivo " << caminho_arquivo << endl;
             // cin >> m.mensagem;
