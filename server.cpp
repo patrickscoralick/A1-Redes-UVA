@@ -46,7 +46,7 @@ int main()
 
     if(bind(serverSocket, (SOCKADDR*)&service, sizeof(service)) == SOCKET_ERROR)
     {
-        cout << "bind() não realizado" << endl;
+        cout << "bind() nao realizado" << endl;
         closesocket(serverSocket);
         WSACleanup();
         return 0;
@@ -80,21 +80,40 @@ int main()
     cout << "\nPasso 6 - Aguardando envio de dados do Cliente..." << endl;
 
     while(true){
-       char textoCliente[1000] = "";
+        // Crio a estrutura mensagem para receber o nome e o título do arquivo
+        mensagem m;
         
-        int byteCount = recv(acceptSocket, textoCliente, sizeof(textoCliente), 0);
+        // Aguardo então o cliente me enviar essas duas informações
+        int byteCountNome = recv(acceptSocket, m.nome, sizeof(m.nome), 0);
+        int byteCountMensagem = recv(acceptSocket, m.mensagem, sizeof(m.mensagem), 0);
 
-        if(byteCount > 0)
+        if(byteCountNome > 0 && byteCountMensagem > 0)
         {
-
             cout << "\nMensagem recebida." << endl;
-            cout << "Texto: " << textoCliente << endl;
+            cout << "Nome: " << m.nome << endl;
+            cout << "Texto: " << m.mensagem << endl;
+
+            // Com os dados recebidos, crio um arquivo com o nome e preencho com a mensagem
+            string nome_do_arquivo = m.nome;
+            string caminho = "receive/" + nome_do_arquivo + ".txt";
+            ofstream arquivo;
+            arquivo.open(caminho);
+            if(arquivo.is_open())
+            {
+                arquivo << m.mensagem;
+                arquivo.close();
+            }
+            else
+            {
+                cout << "Não foi possível criar o arquivo" << m.nome << endl;
+            }
         }
         else
         {
             WSACleanup();
         }
 
+        // E então envio para o cliente a confirmação de recebimento da mensagem
         char confirmationBuffer[200] = "Server: Confirmacao mensagem.";
         int confirmationCount = send(acceptSocket, confirmationBuffer, 200, 0);
         if(confirmationCount > 0)

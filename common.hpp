@@ -13,17 +13,7 @@
 
 using namespace std;
 
-string lerArquivo(string nomeArquivo)
-{
-    string texto;
-
-    ifstream arquivo(nomeArquivo);
-
-    while (getline (arquivo, texto)) {
-        arquivo >> texto;
-    }
-
-    arquivo.close();
-
-    return texto;
-}
+struct mensagem {
+    char mensagem[1000];
+    char nome[50];
+};
