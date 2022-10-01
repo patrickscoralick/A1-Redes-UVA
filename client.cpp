@@ -64,25 +64,27 @@ int main()
         cout << "\nClient: Escreva o nome do arquivo .txt para ser enviado: ";
         cin.getline(buffer, 200);
 
-        string texto, hold;
+        string send_texto, hold;
         string nome_arquivo = buffer;
-        string caminho_arquivo = "send/" + nome_arquivo + ".txt";
+        string caminho_arquivo = nome_arquivo + ".txt";
 
         ifstream arquivo(caminho_arquivo);
 
         if (arquivo.is_open())
         {
+            int count_letras=0;
             while(!arquivo.eof())
             {
                 getline(arquivo, hold);
-                texto += hold;
+                count_letras += hold.size();
+                send_texto += hold;
             }
 
-            const char *str = texto.c_str();
+            const char *str = send_texto.c_str();
 
             auto start = chrono::system_clock::now();
 
-            int byteCount = send(clientSocket, str, sizeof(str), 0);
+            int byteCount = send(clientSocket, str, count_letras, 0);
 
             if(byteCount > 0)
             {
@@ -114,9 +116,22 @@ int main()
         }
         else
         {
-            cout << "Arquivo '" << caminho_arquivo << "' nao encontrado." << endl;
+            cout << "Arquivo '" << caminho_arquivo << "' nao encontrado. Criando " << caminho_arquivo << "...\n" << endl;
+            string create_texto;
+            ofstream arquivo;
+            arquivo.open(caminho_arquivo);
+            if(arquivo.is_open()){
+                cout << "Digite um texto para ser adicionado a " << caminho_arquivo << ":" << endl;
+                cin >> create_texto;
+                arquivo << create_texto;
+                cout << "Arquivo criado!" << endl;
+                arquivo.close();
+            }
+            else
+            {
+                cout << "Nao foi possivel criar o arquivo" << endl;
+            }
         }
-
     }
 
 

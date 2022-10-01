@@ -89,18 +89,6 @@ int main()
 
             cout << "\nMensagem recebida." << endl;
             cout << "Texto: " << textoCliente << endl;
-            
-            ofstream arquivo;
-            arquivo.open("receive/teste.txt");
-            if(arquivo.is_open())
-            {
-                arquivo << textoCliente;
-                arquivo.close();
-            }
-            else
-            {
-                cout << "Não foi possível criar o arquivo" << endl;
-            }
         }
         else
         {

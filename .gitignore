@@ -40,3 +40,5 @@ receive
 send
 
 test.cpp
+
+*.txt
