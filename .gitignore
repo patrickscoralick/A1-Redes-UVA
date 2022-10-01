@@ -35,3 +35,8 @@
 *.pdb
 
 .vscode
+
+receive
+send
+
+test.cpp

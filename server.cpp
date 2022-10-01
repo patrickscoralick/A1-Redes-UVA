@@ -1,10 +1,4 @@
-#include <WinSock2.h>
-#include <WS2tcpip.h>
-#include <iostream>
-
-#pragma comment(lib, "ws2_32.lib")
-
-using namespace std;
+#include "common.hpp"
 
 int main() 
 {
@@ -13,7 +7,6 @@ int main()
 
     cout << "\nPasso 1 - Configurando a DLL..." << endl;
     SOCKET serverSocket, acceptSocket;
-    int port=55555;
     WSADATA wsaData;
     int wsaerr;
     WORD wVersionRequested = MAKEWORD(2, 2);
@@ -49,7 +42,7 @@ int main()
     service.sin_family = AF_INET;
 
     InetPton(AF_INET, "127.0.0.1", &service.sin_addr.s_addr);
-    service.sin_port = htons(port);
+    service.sin_port = htons(PORT);
 
     if(bind(serverSocket, (SOCKADDR*)&service, sizeof(service)) == SOCKET_ERROR)
     {
@@ -84,34 +77,50 @@ int main()
 
     cout << "Server: Conexao realizada" << endl;
 
-    cout << "\nPasso 6 - Conversando com o cliente" << endl;
+    cout << "\nPasso 6 - Aguardando envio de dados do Cliente..." << endl;
 
-    
-    char receiveBuffer[200] = "";
     while(true){
-        int byteCount = recv(acceptSocket, receiveBuffer, 200, 0);
+       char textoCliente[1000] = "";
+        
+        int byteCount = recv(acceptSocket, textoCliente, sizeof(textoCliente), 0);
 
         if(byteCount > 0)
         {
-            cout << "\nClient message: " << receiveBuffer << endl;
+
+            cout << "\nMensagem recebida." << endl;
+            cout << "Texto: " << textoCliente << endl;
+            
+            ofstream arquivo;
+            arquivo.open("receive/teste.txt");
+            if(arquivo.is_open())
+            {
+                arquivo << textoCliente;
+                arquivo.close();
+            }
+            else
+            {
+                cout << "Não foi possível criar o arquivo" << endl;
+            }
         }
         else
         {
             WSACleanup();
         }
 
-        char confirmationBuffer[200] = "Server: Mensagem recebida.";
+        char confirmationBuffer[200] = "Server: Confirmacao mensagem.";
         int confirmationCount = send(acceptSocket, confirmationBuffer, 200, 0);
         if(confirmationCount > 0)
         {
             cout << "Server message: Confirmacao enviada." << endl;
-                   
+                    
         }
         else
         {
             WSACleanup(); 
         }
+    
     }
+    
 
     cout << "\nPasso 7 - Socket encerrado" << endl;
 
@@ -120,3 +129,4 @@ int main()
 
     return 0;
 }
+

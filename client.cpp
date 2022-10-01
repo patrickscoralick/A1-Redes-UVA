@@ -1,10 +1,4 @@
-#include <WinSock2.h>
-#include <WS2tcpip.h>
-#include <iostream>
-
-#pragma comment(lib, "ws2_32.lib")
-
-using namespace std;
+#include "common.hpp"
 
 int main() 
 {
@@ -13,7 +7,6 @@ int main()
 
     cout << "\nPasso 1 - Configurando a DLL..." << endl;
     SOCKET clientSocket;
-    int port=55555;
     WSADATA wsaData;
     int wsaerr;
     WORD wVersionRequested = MAKEWORD(2, 2);
@@ -49,11 +42,11 @@ int main()
     clientService.sin_family = AF_INET;
 
     InetPton(AF_INET, "127.0.0.1", &clientService.sin_addr.s_addr);
-    clientService.sin_port = htons(port);
+    clientService.sin_port = htons(PORT);
 
     if(connect(clientSocket, (SOCKADDR*)&clientService, sizeof(clientService)) == SOCKET_ERROR)
     {
-        cout << "Client: connect() não realizado" << endl;;
+        cout << "Client: connect() nao realizado" << endl;;
         WSACleanup();
         return 0;
     }
@@ -68,32 +61,62 @@ int main()
     while(true)
     {
         char buffer[200] = "";
-        cout << "\nClient: Escreva uma mensagem a ser enviada (nao escreva nada para encerrar): ";
+        cout << "\nClient: Escreva o nome do arquivo .txt para ser enviado: ";
         cin.getline(buffer, 200);
 
-        int byteCount = send(clientSocket, buffer, sizeof(buffer), 0);
+        string texto, hold;
+        string nome_arquivo = buffer;
+        string caminho_arquivo = "send/" + nome_arquivo + ".txt";
 
-        if(byteCount > 0)
+        ifstream arquivo(caminho_arquivo);
+
+        if (arquivo.is_open())
         {
-            cout << "Client: Mensagem enviada: " << byteCount << " bytes." << endl;
+            while(!arquivo.eof())
+            {
+                getline(arquivo, hold);
+                texto += hold;
+            }
+
+            const char *str = texto.c_str();
+
+            auto start = chrono::system_clock::now();
+
+            int byteCount = send(clientSocket, str, sizeof(str), 0);
+
+            if(byteCount > 0)
+            {
+                cout << "\nClient: Mensagem enviada: " << byteCount << " bytes.\n" << endl;
+                cout << "Texto:" << str << endl;
+            }
             
+            else
+            {
+                WSACleanup();
+            }
+
+            char bufferReceived[200] = "";
+            int rByteCount = recv(clientSocket, bufferReceived, 200, 0);
+
+            auto end = chrono::system_clock::now();
+
+            chrono::duration<double> elapsed_time = end - start;
+
+            if(rByteCount > 0)
+            {
+                cout << bufferReceived << endl;
+                cout << "Tempo: " << elapsed_time.count() << "s" << endl;
+            }
+            else
+            {
+                WSACleanup();
+            }
         }
-        
         else
         {
-            WSACleanup();
+            cout << "Arquivo '" << caminho_arquivo << "' nao encontrado." << endl;
         }
 
-        char bufferReceived[200] = "";
-        int rByteCount = recv(clientSocket, bufferReceived, 200, 0);
-        if(rByteCount > 0)
-        {
-            cout << bufferReceived << endl;
-        }
-        else
-        {
-            WSACleanup();
-        }
     }
 
 
