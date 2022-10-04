@@ -24,7 +24,11 @@ int main()
 
     cout << "\nPasso 2 - Configurando o Socket..." << endl;
     clientSocket = INVALID_SOCKET;
-    clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    clientSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
+
+    int nSndBuf = 0;
+
+    setsockopt(clientSocket, SOL_SOCKET, SO_SNDBUF, (char*)&nSndBuf, sizeof(nSndBuf));
 
     if (clientSocket==INVALID_SOCKET) 
     {
@@ -71,12 +75,28 @@ int main()
         nome_arquivo = m.nome;
         caminho_arquivo = "send/" + nome_arquivo + ".txt";
 
+        int tamanho_arquivo = GetFileSize(caminho_arquivo);
+        
+        // Calcula a quantidade de pacotes que serão enviados.
+        total_blocos = ceil(tamanho_arquivo / float(TAMANHO_BLOCO));
+        // Lista que será sobrescrita durante o envio, deve ser deletada no final
+        sobrescrever_envio = new WSAOVERLAPPED[total_blocos];
+        memset(sobrescrever_envio, 0, sizeof(WSAOVERLAPPED) * total_blocos);
+
+        // Armazenará um ponteiro para o arquivo e o seu tamanho na hora de realizar o envio
+        WSABUF dataBuf;
+        
+        // Controlador da quantidade de bytes enviados
+        DWORD dwBytesSent = 0;
+
+        int err;
+        int i, j;
+
         // Tenta então abrir o arquivo com o nome passado pelo usuário (deve estar na pasta 'send')
         ifstream arquivo(caminho_arquivo);
         if (arquivo.is_open())
         {
             // Primeiro, leio o arquivo linha por linha e salvo em 'hold'
-            int count_letras=0;
             while(!arquivo.eof())
             {
                 getline(arquivo, hold);
@@ -88,17 +108,45 @@ int main()
             {
                 m.mensagem[i] = send_texto[i];
             }
-            
-            // Início do relógio que conta o tempo da requisição
-            auto start = chrono::system_clock::now();
 
-            // Envio então o nome e o texto separadamente para o servidor
             int byteCountNome = send(clientSocket, m.nome, sizeof(m.nome), 0);
-            int byteCountMensagem = send(clientSocket, m.mensagem, sizeof(m.mensagem), 0);
+            int byteCountMensagem = 0;
 
-            if(byteCountNome > 0 && byteCountMensagem > 0)
+            for(i = 0, j = 0; i < tamanho_arquivo; i += TAMANHO_BLOCO, j++)
             {
-                cout << "\nClient: Mensagem enviada: " << byteCountNome+byteCountMensagem << " bytes.\n" << endl;
+                int nTransferBytes = min(tamanho_arquivo - i, TAMANHO_BLOCO);
+                dataBuf.buf = &m.mensagem[i];
+                dataBuf.len = nTransferBytes;
+                // Envia os pacotes assincronamente, um de cada vez
+                int byteCountMensagem = WSASend(clientSocket, &dataBuf, 1, &dwBytesSent, 0, &sobrescrever_envio[j], SalvaEnvioCallback);
+
+                if ((byteCountMensagem == SOCKET_ERROR) && (WSA_IO_PENDING != (err = WSAGetLastError())))
+                {
+                    fprintf(stderr, "WSASend Falhou: %d\n", err);
+                    exit(EXIT_FAILURE);
+                }
+                
+            }       
+
+            printf("(0 blocos de %d) Taxa de Upload: ???? KB/sec", bytes_enviados);    
+
+            // Continua verificando até a conclusão de todos os blocos
+            while(blocos_concluidos < total_blocos)
+            {
+                SleepEx(10, TRUE);
+                printf("\r(%d blocos de %d) ", blocos_concluidos, total_blocos);
+                float taxa_envio_kbytes = bytes_enviados/1024.0f;
+                printf("Taxa de Upload: %.2f KB/sec", taxa_envio_kbytes);
+                // Reseta a taxa de bytes
+                bytes_enviados = 0;
+            }
+
+            // Deleta todos os dados sobrescritos
+            
+
+            cout << "\nTransferencia concluida!\n" << endl;
+            if(bytes_enviados > 0)
+            {
                 cout << "Nome: " << caminho_arquivo << endl;
                 cout << "Texto: " << m.mensagem << "\n" << endl;
             }
@@ -108,41 +156,12 @@ int main()
                 WSACleanup();
             }
 
-            // Por fim aguardo o servidor enviar uma resposta de confirmação de que a mensagem chegou ao destino
-            char bufferReceived[200] = "";
-            int rByteCount = recv(clientSocket, bufferReceived, 200, 0);
-
-            // Contabilização do tempo de processamento da requisição
-            auto end = chrono::system_clock::now();
-            chrono::duration<double> elapsed_time = end - start;
-
-            if(rByteCount > 0)
-            {
-                cout << bufferReceived << endl;
-                cout << "Tempo: " << elapsed_time.count() << "s" << endl;
-            }
-            else
-            {
-                WSACleanup();
-            }
+            delete [] sobrescrever_envio;
+            break;
         }
         else
         {
-            // Tentei fazer uma criação autmática de arquivo, caso ele não existisse. Mas não deu mt certo.
-            cout << "Arquivo '" << caminho_arquivo << "' nao encontrado. Criando novo arquivo..." << endl;
-
-            // ofstream arquivo(caminho_arquivo);
-            // cout << "Digite o texto do arquivo " << caminho_arquivo << endl;
-            // cin >> m.mensagem;
-            // if(arquivo.is_open()){
-            //     arquivo <<"isso é um teste" << endl;
-            //     arquivo.close();
-            //     cout << "Arquivo criado com sucesso." << endl;
-            // }
-            // else
-            // {
-            //     cout << "Nao foi possível criar o arquivo "<< caminho_arquivo <<"." << endl;
-            // }
+            cout << "Arquivo '" << caminho_arquivo << "' nao encontrado." << endl;
         }
     }
 
